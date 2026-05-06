@@ -73,8 +73,15 @@ const char *scalar_ctor(size_t n, Type type)
 
 static size_t sig_arg_count = 0;
 
-void gen_sig_begin(FILE *stream, const char *ret_type, const char *name)
+typedef struct {
+    const char *deprecated;
+} Gen_Sig_Begin_Opt;
+#define gen_sig_begin(stream, ret_type, name, ...) gen_sig_begin_opt(stream, ret_type, name, (Gen_Sig_Begin_Opt) { __VA_ARGS__ })
+void gen_sig_begin_opt(FILE *stream, const char *ret_type, const char *name, Gen_Sig_Begin_Opt opt)
 {
+    if (opt.deprecated) {
+        fgenf(stream, "LA_DEPRECATED(\"%s\")", opt.deprecated);
+    }
     fprintf(stream, "LADEF %s %s(", ret_type, name);
     sig_arg_count = 0;
 }
@@ -86,16 +93,28 @@ void gen_sig_arg(FILE *stream, const char *arg_type, const char *arg_name)
     sig_arg_count += 1;
 }
 
-void gen_sig_end(FILE *stream, bool impl)
+typedef struct {
+    bool no_line_break;
+} Gen_Sig_End_Opt;
+#define gen_sig_end(stream, impl, ...) gen_sig_end_opt(stream, impl, (Gen_Sig_End_Opt){ __VA_ARGS__ })
+void gen_sig_end_opt(FILE *stream, bool impl, Gen_Sig_End_Opt opt)
 {
     if (sig_arg_count == 0) {
         fprintf(stream, "void");
     }
 
     if (impl) {
-        fgenf(stream, ")");
+        if (opt.no_line_break) {
+            fprintf(stream, ")");
+        } else {
+            fgenf(stream, ")");
+        }
     } else {
-        fgenf(stream, ");");
+        if (opt.no_line_break) {
+            fprintf(stream, ");");
+        } else {
+            fgenf(stream, ");");
+        }
     }
 }
 
@@ -468,17 +487,22 @@ void gen_vec_sqrlen(FILE *stream, size_t n, Type type, bool impl)
     fgen_line_break(stream);
 }
 
-const char *vec_convert(size_t dst_n, Type dst_type, size_t src_n, Type src_type)
+const char *vec_legacy_convert(size_t dst_n, Type dst_type, size_t src_n, Type src_type)
 {
     return temp_sprintf("v%zu%s%zu%s", dst_n, type_defs[dst_type].suffix, src_n, type_defs[src_type].suffix);
 }
 
-void gen_vec_convert(FILE *stream, size_t dst_n, Type dst_type, size_t src_n, Type src_type, bool impl)
+const char *vec_new_convert(size_t dst_n, Type dst_type, size_t src_n, Type src_type)
+{
+    return temp_sprintf("v%zu%s_%zu%s", src_n, type_defs[src_type].suffix, dst_n, type_defs[dst_type].suffix);
+}
+
+void gen_vec_new_convert(FILE *stream, size_t dst_n, Type dst_type, size_t src_n, Type src_type, bool impl)
 {
     // Converting to itself is pointless
     if (dst_n == src_n && dst_type == src_type) return;
 
-    gen_sig_begin(stream, vec_type(dst_n, dst_type), vec_convert(dst_n, dst_type, src_n, src_type)); {
+    gen_sig_begin(stream, vec_type(dst_n, dst_type), vec_new_convert(dst_n, dst_type, src_n, src_type)); {
         gen_sig_arg(stream, vec_type(src_n, src_type), "a");
     } gen_sig_end(stream, impl);
 
@@ -495,7 +519,20 @@ void gen_vec_convert(FILE *stream, size_t dst_n, Type dst_type, size_t src_n, Ty
     }
     fgenf(stream, "    return result;");
     fgenf(stream, "}");
-    fgen_line_break(stream);
+}
+
+void gen_vec_legacy_convert(FILE *stream, size_t dst_n, Type dst_type, size_t src_n, Type src_type, bool impl)
+{
+    // Converting to itself is pointless
+    if (dst_n == src_n && dst_type == src_type) return;
+
+    gen_sig_begin(stream, vec_type(dst_n, dst_type), vec_legacy_convert(dst_n, dst_type, src_n, src_type), .deprecated = impl ? NULL : temp_sprintf("Use %s instead to maintain consistent naming convention where the prefix encodes the type of the first argument.", vec_new_convert(dst_n, dst_type, src_n, src_type))); {
+        gen_sig_arg(stream, vec_type(src_n, src_type), "a");
+    } gen_sig_end(stream, impl, .no_line_break = impl);
+
+    if (!impl) return;
+
+    fgenf(stream, " { return %s(a); }", vec_new_convert(dst_n, dst_type, src_n, src_type));
 }
 
 void gen_vec_printf_macros(FILE *stream, size_t n, Type type)
@@ -876,6 +913,67 @@ void gen_mat_rot_z(FILE *stream, size_t n, Type type, bool impl)
     fgen_line_break(stream);
 }
 
+bool generate_next_swizzle_mask(String_Builder *mask, size_t m)
+{
+    for (size_t i = 0; i < mask->count; ++i) {
+        mask->items[i] += 1;
+        if ((size_t)mask->items[i] < m) return true;
+        mask->items[i] = 0;
+    }
+    return false;
+}
+
+bool is_perfect_mask(String_Builder mask)
+{
+    for (size_t i = 0; i < mask.count; ++i) {
+        if ((size_t)mask.items[i] != i) return false;
+    }
+    return true;
+}
+
+void gen_swizzle_funcs(FILE *stream, size_t target_n, size_t source_n, Type type, bool impl)
+{
+    if (!(2 <= target_n && target_n <= 4)) return;
+    if (!(2 <= source_n && source_n <= 4)) return;
+
+    static String_Builder mask = {0};
+    mask.count = 0;
+    for (size_t i = 0; i < target_n; ++i) {
+        sb_append(&mask, 0);
+    }
+
+    size_t mark = temp_save();
+    do {
+        temp_rewind(mark);
+
+        static String_Builder name = {0};
+        name.count = 0;
+        da_foreach(char, x, &mask) {
+            sb_append_cstr(&name, ARRAY_GET(vec_comps, *x));
+        }
+        sb_append_null(&name);
+        gen_sig_begin(stream, vec_type(target_n, type), vec_func(source_n, type, name.items));
+        gen_sig_arg(stream, vec_type(source_n, type), "v");
+        gen_sig_end(stream, impl, .no_line_break = impl);
+
+        if (!impl) continue;
+
+        fprintf(stream, " {");
+        if (target_n == source_n && is_perfect_mask(mask)) {
+            fprintf (stream, " return v; ");
+        } else {
+            fprintf(stream, " return (%s) {.c={", vec_type(target_n, type));
+            da_foreach(char, x, &mask) {
+                size_t index = x - mask.items;
+                if (index > 0) fprintf(stream, ",");
+                fprintf(stream, "v.%s", ARRAY_GET(vec_comps, *x));
+            }
+            fprintf(stream, "}}; ");
+        }
+        fgenf(stream, "}");
+    } while(generate_next_swizzle_mask(&mask, source_n));
+}
+
 int main()
 {
     FILE *stream = stdout;
@@ -891,6 +989,20 @@ int main()
         fgenf(stream, "#ifndef LADEF");
         fgenf(stream, "#define LADEF static inline");
         fgenf(stream, "#endif // LADEF");
+        fgen_line_break(stream);
+        fgenf(stream, "#ifdef LA_WARN_DEPRECATED");
+        fgenf(stream, "#    ifndef LA_DEPRECATED");
+        fgenf(stream, "#        if defined(__GNUC__) || defined(__clang__)");
+        fgenf(stream, "#            define LA_DEPRECATED(message) __attribute__((deprecated(message)))");
+        fgenf(stream, "#        elif defined(_MSC_VER)");
+        fgenf(stream, "#            define LA_DEPRECATED(message) __declspec(deprecated(message))");
+        fgenf(stream, "#        else");
+        fgenf(stream, "#            define LA_DEPRECATED(...)");
+        fgenf(stream, "#        endif");
+        fgenf(stream, "#    endif /* LA_DEPRECATED */");
+        fgenf(stream, "#else");
+        fgenf(stream, "#    define LA_DEPRECATED(...)");
+        fgenf(stream, "#endif /* LA_WARN_DEPRECATED */");
         fgen_line_break(stream);
         for (Type type = 0; type < COUNT_TYPES; ++type) gen_lerp(stream, type, false);
         for (Type type = 0; type < COUNT_TYPES; ++type) gen_min(stream, type, false);
@@ -908,11 +1020,17 @@ int main()
                 gen_vec_printf_macros(stream, n, type);
                 gen_vec_ctor(stream, n, type, false);
                 gen_scalar_ctor(stream, n, type, false);
+
+                fgen_line_break(stream);
+
                 for (size_t src_n = VECTOR_MIN_SIZE; src_n <= VECTOR_MAX_SIZE; ++src_n) {
                     for (Type src_type = 0; src_type < COUNT_TYPES; ++src_type) {
-                        gen_vec_convert(stream, n, type, src_n, src_type, false);
+                        gen_vec_new_convert(stream, n, type, src_n, src_type, false);
+                        gen_vec_legacy_convert(stream, n, type, src_n, src_type, false);
                     }
                 }
+
+                fgen_line_break(stream);
 
                 gen_vec_ops(stream, n, type, false);
                 gen_vec_funs(stream, n, type, false);
@@ -930,6 +1048,15 @@ int main()
                 gen_mat_rot_x(stream, n, type, false);
                 gen_mat_rot_y(stream, n, type, false);
                 gen_mat_rot_z(stream, n, type, false);
+                fgen_line_break(stream);
+            }
+        }
+
+        for (Type type = 0; type < COUNT_TYPES; ++type) {
+            for (size_t n = VECTOR_MIN_SIZE; n <= VECTOR_MAX_SIZE; ++n) {
+                for (size_t m = VECTOR_MIN_SIZE; m <= VECTOR_MAX_SIZE; ++m) {
+                    gen_swizzle_funcs(stdout, n, m, type, false);
+                }
                 fgen_line_break(stream);
             }
         }
@@ -953,7 +1080,9 @@ int main()
                 gen_scalar_ctor(stream, n, type, true);
                 for (size_t src_n = VECTOR_MIN_SIZE; src_n <= VECTOR_MAX_SIZE; ++src_n) {
                     for (Type src_type = 0; src_type < COUNT_TYPES; ++src_type) {
-                        gen_vec_convert(stream, n, type, src_n, src_type, true);
+                        gen_vec_new_convert(stream, n, type, src_n, src_type, true);
+                        gen_vec_legacy_convert(stream, n, type, src_n, src_type, true);
+                        fgen_line_break(stream);
                     }
                 }
 
@@ -975,6 +1104,16 @@ int main()
                 gen_mat_rot_z(stream, n, type, true);
             }
         }
+
+        for (Type type = 0; type < COUNT_TYPES; ++type) {
+            for (size_t n = VECTOR_MIN_SIZE; n <= VECTOR_MAX_SIZE; ++n) {
+                for (size_t m = VECTOR_MIN_SIZE; m <= VECTOR_MAX_SIZE; ++m) {
+                    gen_swizzle_funcs(stdout, n, m, type, true);
+                }
+                fgen_line_break(stream);
+            }
+        }
+
         fgenf(stream, "#endif // LA_IMPLEMENTATION");
     }
 
@@ -985,6 +1124,5 @@ int main()
 // TODO: documentation
 // TODO: I'm not sure if different size conversions of the vectors are that useful
 // Maybe only the same size casting?
-// TODO: Would be interesting to introduce some sort of swizzling, like: V4f v2f_xxyy(V2f v)
 // TODO: name prefix system similar to the one from nob.h
 // TODO: ilerp
