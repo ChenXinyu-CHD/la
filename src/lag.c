@@ -461,9 +461,9 @@ void gen_vec_eq(FILE *stream, size_t n, Type type, bool impl)
         if (type_defs[type].is_integer) {
             fgenf(stream, "    if (a.%s != b.%s) return false;", vec_comps[i], vec_comps[i]);
         } else if (type == TYPE_FLOAT) {
-            fgenf(stream, "    if (fabsf(b.%s - a.%s) <= eps) return false;", vec_comps[i], vec_comps[i]);
+            fgenf(stream, "    if (fabsf(b.%s - a.%s) > eps) return false;", vec_comps[i], vec_comps[i]);
         } else if (type == TYPE_DOUBLE) {
-            fgenf(stream, "    if (fabs(b.%s - a.%s) <= eps) return false;", vec_comps[i], vec_comps[i]);
+            fgenf(stream, "    if (fabs(b.%s - a.%s) > eps) return false;", vec_comps[i], vec_comps[i]);
         } else {
             UNREACHABLE("gen_vector_eq: type");
         }
