@@ -315,6 +315,7 @@ LADEF M2f m2f_zero(void);
 LADEF M2f m2f_mul(M2f a, M2f b);
 LADEF V2f m2f_mul_vec(M2f m, V2f v);
 LADEF M2f m2f_rot(float angle);
+LADEF M2f m2f_trans(M2f m);
 
 #define V2d_Fmt "v2d(%lf, %lf)"
 #define V2d_Arg(v) (v).x, (v).y
@@ -382,6 +383,7 @@ LADEF M2d m2d_zero(void);
 LADEF M2d m2d_mul(M2d a, M2d b);
 LADEF V2d m2d_mul_vec(M2d m, V2d v);
 LADEF M2d m2d_rot(double angle);
+LADEF M2d m2d_trans(M2d m);
 
 #define V2i_Fmt "v2i(%d, %d)"
 #define V2i_Arg(v) (v).x, (v).y
@@ -439,6 +441,7 @@ LADEF M2i m2i_id(void);
 LADEF M2i m2i_zero(void);
 LADEF M2i m2i_mul(M2i a, M2i b);
 LADEF V2i m2i_mul_vec(M2i m, V2i v);
+LADEF M2i m2i_trans(M2i m);
 
 #define V2u_Fmt "v2u(%u, %u)"
 #define V2u_Arg(v) (v).x, (v).y
@@ -496,6 +499,7 @@ LADEF M2u m2u_id(void);
 LADEF M2u m2u_zero(void);
 LADEF M2u m2u_mul(M2u a, M2u b);
 LADEF V2u m2u_mul_vec(M2u m, V2u v);
+LADEF M2u m2u_trans(M2u m);
 
 #define V3f_Fmt "v3f(%f, %f, %f)"
 #define V3f_Arg(v) (v).x, (v).y, (v).z
@@ -566,6 +570,7 @@ LADEF V3f m3f_mul_vec(M3f m, V3f v);
 LADEF M3f m3f_rot_x(float angle);
 LADEF M3f m3f_rot_y(float angle);
 LADEF M3f m3f_rot_z(float angle);
+LADEF M3f m3f_trans(M3f m);
 
 #define V3d_Fmt "v3d(%lf, %lf, %lf)"
 #define V3d_Arg(v) (v).x, (v).y, (v).z
@@ -636,6 +641,7 @@ LADEF V3d m3d_mul_vec(M3d m, V3d v);
 LADEF M3d m3d_rot_x(double angle);
 LADEF M3d m3d_rot_y(double angle);
 LADEF M3d m3d_rot_z(double angle);
+LADEF M3d m3d_trans(M3d m);
 
 #define V3i_Fmt "v3i(%d, %d, %d)"
 #define V3i_Arg(v) (v).x, (v).y, (v).z
@@ -694,6 +700,7 @@ LADEF M3i m3i_id(void);
 LADEF M3i m3i_zero(void);
 LADEF M3i m3i_mul(M3i a, M3i b);
 LADEF V3i m3i_mul_vec(M3i m, V3i v);
+LADEF M3i m3i_trans(M3i m);
 
 #define V3u_Fmt "v3u(%u, %u, %u)"
 #define V3u_Arg(v) (v).x, (v).y, (v).z
@@ -752,6 +759,7 @@ LADEF M3u m3u_id(void);
 LADEF M3u m3u_zero(void);
 LADEF M3u m3u_mul(M3u a, M3u b);
 LADEF V3u m3u_mul_vec(M3u m, V3u v);
+LADEF M3u m3u_trans(M3u m);
 
 #define V4f_Fmt "v4f(%f, %f, %f, %f)"
 #define V4f_Arg(v) (v).x, (v).y, (v).z, (v).w
@@ -821,6 +829,7 @@ LADEF V4f m4f_mul_vec(M4f m, V4f v);
 LADEF M4f m4f_rot_x(float angle);
 LADEF M4f m4f_rot_y(float angle);
 LADEF M4f m4f_rot_z(float angle);
+LADEF M4f m4f_trans(M4f m);
 
 #define V4d_Fmt "v4d(%lf, %lf, %lf, %lf)"
 #define V4d_Arg(v) (v).x, (v).y, (v).z, (v).w
@@ -890,6 +899,7 @@ LADEF V4d m4d_mul_vec(M4d m, V4d v);
 LADEF M4d m4d_rot_x(double angle);
 LADEF M4d m4d_rot_y(double angle);
 LADEF M4d m4d_rot_z(double angle);
+LADEF M4d m4d_trans(M4d m);
 
 #define V4i_Fmt "v4i(%d, %d, %d, %d)"
 #define V4i_Arg(v) (v).x, (v).y, (v).z, (v).w
@@ -947,6 +957,7 @@ LADEF M4i m4i_id(void);
 LADEF M4i m4i_zero(void);
 LADEF M4i m4i_mul(M4i a, M4i b);
 LADEF V4i m4i_mul_vec(M4i m, V4i v);
+LADEF M4i m4i_trans(M4i m);
 
 #define V4u_Fmt "v4u(%u, %u, %u, %u)"
 #define V4u_Arg(v) (v).x, (v).y, (v).z, (v).w
@@ -1004,6 +1015,7 @@ LADEF M4u m4u_id(void);
 LADEF M4u m4u_zero(void);
 LADEF M4u m4u_mul(M4u a, M4u b);
 LADEF V4u m4u_mul_vec(M4u m, V4u v);
+LADEF M4u m4u_trans(M4u m);
 
 LADEF V2f v2f_xx(V2f v);
 LADEF V2f v2f_yx(V2f v);
@@ -3309,6 +3321,15 @@ LADEF M2f m2f_rot(float angle)
     return m;
 }
 
+LADEF M2f m2f_trans(M2f m)
+{
+    M2f t = {
+        ._11=m._11,._12=m._21,
+        ._21=m._12,._22=m._22,
+    };
+    return t;
+}
+
 LADEF V2d v2d(double x, double y)
 {
     V2d v;
@@ -3615,6 +3636,15 @@ LADEF M2d m2d_rot(double angle)
     return m;
 }
 
+LADEF M2d m2d_trans(M2d m)
+{
+    M2d t = {
+        ._11=m._11,._12=m._21,
+        ._21=m._12,._22=m._22,
+    };
+    return t;
+}
+
 LADEF V2i v2i(int x, int y)
 {
     V2i v;
@@ -3850,6 +3880,15 @@ LADEF V2i m2i_mul_vec(M2i m, V2i v)
     return r;
 }
 
+LADEF M2i m2i_trans(M2i m)
+{
+    M2i t = {
+        ._11=m._11,._12=m._21,
+        ._21=m._12,._22=m._22,
+    };
+    return t;
+}
+
 LADEF V2u v2u(unsigned int x, unsigned int y)
 {
     V2u v;
@@ -4083,6 +4122,15 @@ LADEF V2u m2u_mul_vec(M2u m, V2u v)
     r.x = v2u_dot(m.v[0], v);
     r.y = v2u_dot(m.v[1], v);
     return r;
+}
+
+LADEF M2u m2u_trans(M2u m)
+{
+    M2u t = {
+        ._11=m._11,._12=m._21,
+        ._21=m._12,._22=m._22,
+    };
+    return t;
 }
 
 LADEF V3f v3f(float x, float y, float z)
@@ -4456,6 +4504,16 @@ LADEF M3f m3f_rot_z(float angle)
     return m;
 }
 
+LADEF M3f m3f_trans(M3f m)
+{
+    M3f t = {
+        ._11=m._11,._12=m._21,._13=m._31,
+        ._21=m._12,._22=m._22,._23=m._32,
+        ._31=m._13,._32=m._23,._33=m._33,
+    };
+    return t;
+}
+
 LADEF V3d v3d(double x, double y, double z)
 {
     V3d v;
@@ -4827,6 +4885,16 @@ LADEF M3d m3d_rot_z(double angle)
     return m;
 }
 
+LADEF M3d m3d_trans(M3d m)
+{
+    M3d t = {
+        ._11=m._11,._12=m._21,._13=m._31,
+        ._21=m._12,._22=m._22,._23=m._32,
+        ._31=m._13,._32=m._23,._33=m._33,
+    };
+    return t;
+}
+
 LADEF V3i v3i(int x, int y, int z)
 {
     V3i v;
@@ -5100,6 +5168,16 @@ LADEF V3i m3i_mul_vec(M3i m, V3i v)
     return r;
 }
 
+LADEF M3i m3i_trans(M3i m)
+{
+    M3i t = {
+        ._11=m._11,._12=m._21,._13=m._31,
+        ._21=m._12,._22=m._22,._23=m._32,
+        ._31=m._13,._32=m._23,._33=m._33,
+    };
+    return t;
+}
+
 LADEF V3u v3u(unsigned int x, unsigned int y, unsigned int z)
 {
     V3u v;
@@ -5371,6 +5449,16 @@ LADEF V3u m3u_mul_vec(M3u m, V3u v)
     r.y = v3u_dot(m.v[1], v);
     r.z = v3u_dot(m.v[2], v);
     return r;
+}
+
+LADEF M3u m3u_trans(M3u m)
+{
+    M3u t = {
+        ._11=m._11,._12=m._21,._13=m._31,
+        ._21=m._12,._22=m._22,._23=m._32,
+        ._31=m._13,._32=m._23,._33=m._33,
+    };
+    return t;
 }
 
 LADEF V4f v4f(float x, float y, float z, float w)
@@ -5773,6 +5861,17 @@ LADEF M4f m4f_rot_z(float angle)
     return m;
 }
 
+LADEF M4f m4f_trans(M4f m)
+{
+    M4f t = {
+        ._11=m._11,._12=m._21,._13=m._31,._14=m._41,
+        ._21=m._12,._22=m._22,._23=m._32,._24=m._42,
+        ._31=m._13,._32=m._23,._33=m._33,._34=m._43,
+        ._41=m._14,._42=m._24,._43=m._34,._44=m._44,
+    };
+    return t;
+}
+
 LADEF V4d v4d(double x, double y, double z, double w)
 {
     V4d v;
@@ -6173,6 +6272,17 @@ LADEF M4d m4d_rot_z(double angle)
     return m;
 }
 
+LADEF M4d m4d_trans(M4d m)
+{
+    M4d t = {
+        ._11=m._11,._12=m._21,._13=m._31,._14=m._41,
+        ._21=m._12,._22=m._22,._23=m._32,._24=m._42,
+        ._31=m._13,._32=m._23,._33=m._33,._34=m._43,
+        ._41=m._14,._42=m._24,._43=m._34,._44=m._44,
+    };
+    return t;
+}
+
 LADEF V4i v4i(int x, int y, int z, int w)
 {
     V4i v;
@@ -6468,6 +6578,17 @@ LADEF V4i m4i_mul_vec(M4i m, V4i v)
     return r;
 }
 
+LADEF M4i m4i_trans(M4i m)
+{
+    M4i t = {
+        ._11=m._11,._12=m._21,._13=m._31,._14=m._41,
+        ._21=m._12,._22=m._22,._23=m._32,._24=m._42,
+        ._31=m._13,._32=m._23,._33=m._33,._34=m._43,
+        ._41=m._14,._42=m._24,._43=m._34,._44=m._44,
+    };
+    return t;
+}
+
 LADEF V4u v4u(unsigned int x, unsigned int y, unsigned int z, unsigned int w)
 {
     V4u v;
@@ -6761,6 +6882,17 @@ LADEF V4u m4u_mul_vec(M4u m, V4u v)
     r.z = v4u_dot(m.v[2], v);
     r.w = v4u_dot(m.v[3], v);
     return r;
+}
+
+LADEF M4u m4u_trans(M4u m)
+{
+    M4u t = {
+        ._11=m._11,._12=m._21,._13=m._31,._14=m._41,
+        ._21=m._12,._22=m._22,._23=m._32,._24=m._42,
+        ._31=m._13,._32=m._23,._33=m._33,._34=m._43,
+        ._41=m._14,._42=m._24,._43=m._34,._44=m._44,
+    };
+    return t;
 }
 
 LADEF V2f v2f_xx(V2f v) { return (V2f) {.c={v.x,v.x}}; }

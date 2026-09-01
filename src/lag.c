@@ -913,6 +913,31 @@ void gen_mat_rot_z(FILE *stream, size_t n, Type type, bool impl)
     fgen_line_break(stream);
 }
 
+void gen_mat_trans(FILE *stream, size_t rows, size_t cols, Type type, bool impl)
+{
+    gen_sig_begin(stream,
+                  mat_type(cols, rows, type),
+                  mat_func(rows, cols, type, "trans"));
+    gen_sig_arg(stream, mat_type(cols, rows, type), "m");
+    gen_sig_end(stream, impl);
+
+    if (!impl) return;
+
+    fgenf(stream, "{");
+    fgenf(stream, "    %s t = {", mat_type(cols, rows, type));
+    for (size_t i = 1; i < cols + 1; ++i) {
+        fprintf(stream, "        ");
+        for (size_t j = 1; j < rows + 1; ++j) {
+            fprintf(stream, "._%zu%zu=m._%zu%zu,", i, j, j, i);
+        }
+        fgen_line_break(stream);
+    }
+    fgenf(stream, "    };");
+    fgenf(stream, "    return t;");
+    fgenf(stream, "}");
+    fgen_line_break(stream);
+}
+
 bool generate_next_swizzle_mask(String_Builder *mask, size_t m)
 {
     for (size_t i = 0; i < mask->count; ++i) {
@@ -1048,6 +1073,7 @@ int main()
                 gen_mat_rot_x(stream, n, type, false);
                 gen_mat_rot_y(stream, n, type, false);
                 gen_mat_rot_z(stream, n, type, false);
+                gen_mat_trans(stream, n, n, type, false);
                 fgen_line_break(stream);
             }
         }
@@ -1102,6 +1128,7 @@ int main()
                 gen_mat_rot_x(stream, n, type, true);
                 gen_mat_rot_y(stream, n, type, true);
                 gen_mat_rot_z(stream, n, type, true);
+                gen_mat_trans(stream, n, n, type, true);
             }
         }
 
